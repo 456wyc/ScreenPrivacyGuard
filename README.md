@@ -1,4 +1,4 @@
-# 屏安符（PrivacyGuard AI）
+# 屏安符（ScreenPrivacyGuard）
 
 > 一个纯本地运行的 AI 隐私屏保：用摄像头识别陌生人或机主离开，自动模糊 / 遮挡屏幕，让旁人看不到你在看什么。
 
@@ -101,7 +101,7 @@ python main.py
 ### Windows / macOS
 ```powershell
 pip install pyinstaller
-pyinstaller --noconfirm --windowed --name PrivacyGuardAI main.py
+pyinstaller --noconfirm --windowed --name ScreenPrivacyGuard main.py
 ```
 正式分发时，请从签名后的 `.app` / `.exe` 测试摄像头与截屏权限；macOS 分发通常需要签名与公证。
 
