@@ -1,27 +1,30 @@
-# PrivacyGuard AI
+# 屏安符（PrivacyGuard AI）
 
-Cross-platform (Windows 10/11 + macOS) local-AI desktop privacy screen prototype.
+> 一个纯本地运行的 AI 隐私屏保：用摄像头识别陌生人或机主离开，自动模糊 / 遮挡屏幕，让旁人看不到你在看什么。
 
-## Features
-- Local webcam face detection (OpenCV YuNet) and owner recognition (OpenCV SFace).
-- Owner enrollment from 20 face samples.
-- Fail-closed protection: once the owner is enrolled, the screen stays protected whenever the owner is not in view (e.g. you step away), even if no stranger is present. A short grace period avoids false triggers when you briefly look down.
-- Approximate distance estimation from face width and configurable camera FOV.
-- Distance-based dimming and blur strength.
-- Simple overlay mode (no screen-recording permission required).
-- True desktop blur mode using MSS screen capture + OpenCV Gaussian blur.
-- Settings saved locally in `~/.privacyguard-ai/config.json`.
-- Two independent protection methods that can be enabled/configured separately: (1) full-screen blur/dim overlay, and (2) auto-raise of chosen applications (Windows only). Each has its own on/off switch and its own trigger rules (stranger detected and/or owner absent).
+**屏安符**是一款跨平台的桌面隐私防护原型（Windows 10/11 + macOS）。它完全在本机运行——人脸检测、机主识别、屏幕模糊全部离线完成，**不上传任何画面或人脸数据**。当你离开座位、或有陌生人靠近时，屏幕会自动进入保护状态。
 
-## Requirements
-- Python 3.11 recommended (3.10+ may work).
-- A webcam.
-- Windows: Windows 10/11.
-- macOS: recent macOS release. For true blur, grant Screen & System Audio Recording / Screen Recording permission to the terminal or packaged app. Camera permission is also required.
+![屏安符界面](docs/assets/preview-placeholder.svg)
 
-## Install
+## 核心特性
 
-### Windows (PowerShell)
+- **本地人脸识别**：使用 OpenCV YuNet 做人脸检测、SFace 做机主识别，20 张样本完成机主录入。
+- **机主缺席即保护（fail-closed）**：录入机主后，只要镜头里看不到机主（比如你起身离开），即使没有陌生人，屏幕也会保持保护；短暂低头 / 侧身有宽限时间，避免误触发。
+- **基于距离的强度调节**：根据人脸在画面中的大小估算距离（结合设定的摄像头视角），越近保护越强，暗度与模糊度平滑渐变。
+- **两种独立保护手段**：① 全屏模糊 / 遮挡覆盖层；② 自动把指定程序窗口置顶（仅 Windows）。各自可独立开关、独立配置触发规则。
+- **防闪烁**：非对称平滑（保护快、解除慢）+ 显示迟滞 + 漏检宽限 + 渐进淡入淡出，避免覆盖层反复闪现；Windows 上真实模糊用 `WDA_EXCLUDEFROMCAPTURE` 让覆盖层不进入截屏，抓屏时无需隐藏窗口，从根本上消除周期闪烁。
+- **隐私优先**：所有处理均在本机完成，机主特征向量保存在本地配置，不联网、不上传。
+
+## 环境要求
+
+- Python 3.11（推荐，3.10+ 可能可用）
+- 摄像头
+- Windows 10/11，或较新版本的 macOS
+- macOS 上若使用"真实模糊"，需给终端或打包后的 App 授予「屏幕录制 / 屏幕与系统音频录制」权限，以及摄像头权限
+
+## 安装
+
+### Windows（PowerShell）
 ```powershell
 py -3.11 -m venv .venv
 .venv\Scripts\Activate.ps1
@@ -39,80 +42,87 @@ pip install -r requirements.txt
 python main.py
 ```
 
-The first launch downloads the two OpenCV Zoo ONNX models into `~/.privacyguard-ai/models/`.
-An internet connection is needed only for this first model download.
+首次启动会把两个 OpenCV Zoo 的 ONNX 模型下载到 `~/.privacyguard-ai/models/`，**只有这一次需要联网**，之后完全离线。
 
-## First run
-1. Click **Register / Update owner face**.
-2. Sit in front of the camera, look toward it, and keep your face unobstructed for a few seconds.
-3. Wait for 20 samples to be collected.
-4. Select **Simple overlay** first and test with another person approaching.
-5. Select **True desktop blur** to test screen capture. Grant OS permissions if prompted.
+## 首次使用
 
-## Anti-flicker / smoothness tuning
-Detected stranger distance and face hits naturally fluctuate frame to frame. The overlay smooths the visual risk with asymmetric easing (fast to protect, slow to release) plus show/hide hysteresis, and the vision worker applies a short miss-grace so a single dropped detection does not drop protection. The overlay is shown only while protecting (fading in from fully transparent, fading out before hiding), so when idle it is not on screen at all and cannot intercept mouse clicks; the window is also click-through via a Win32 extended style. You can tune these in `~/.privacyguard-ai/config.json`:
+1. 点「注册 / 更新机主人脸」。
+2. 正对摄像头、保持面部无遮挡几秒。
+3. 等待采集满 20 张样本。
+4. 先选「简易模式」，让另一个人走近测试效果。
+5. 再切到「真实模糊」测试屏幕捕获（系统如弹出权限提示请允许）。
 
-- `risk_rise_alpha` / `risk_fall_alpha` (0..1): easing speed. Smaller = smoother but slower to react.
-- `show_threshold` / `hide_threshold`: hysteresis window for entering/leaving protection (hide should stay below show).
-- `stranger_miss_grace` (seconds): how long protection is held after the stranger is momentarily lost.
-- `capture_interval_ms` (true blur): screen-capture cadence; smaller is smoother but uses more CPU.
-- `blur_kernel_size` (true blur): Gaussian kernel size; strength is controlled by a continuous sigma so there is no visible stepping.
-- `exclude_from_capture` (Windows, true blur): exclude the overlay from screen captures so it never needs to hide. Disable only if your capture tool shows a residual self-capture.
-- `protect_when_owner_absent`: when enabled (and an owner is enrolled), protect the screen whenever the owner is not in view. Disable to go back to stranger-only triggering.
-- `owner_absent_risk`: protection strength (0..1) used when the owner is absent and no stranger is visible.
-- `owner_absent_grace` (seconds): how long the owner may be out of view before fail-closed protection kicks in (avoids false triggers when looking down).
-- `overlay_enabled` / `auto_raise_enabled`: independent on/off switches for the two protection methods. Turning the blur overlay off does **not** disable auto-raise (and vice versa).
-- `overlay_triggers` / `auto_raise_triggers`: lists of reasons that activate each method. Allowed values: `"stranger"` (a visitor is detected) and `"owner_absent"` (enrolled owner is not in view). Both can be selected; an empty list falls back to both.
+## 两种保护手段
 
-## Important limitations
-- A normal RGB webcam does not measure depth. Distance is an estimate based on apparent face width, assumed average face width (14.5 cm), and camera horizontal FOV. Set the FOV to match your camera; a known-distance calibration is recommended.
-- SFace matching is not a security-grade biometric authentication system. Lighting, pose, camera quality and face appearance can affect recognition. Keep a manual pause/disable hotkey available.
-- The true blur overlay stays on screen and does not blink: on Windows it uses `WDA_EXCLUDEFROMCAPTURE` so the overlay is excluded from screen captures (it never has to hide itself), and the captured frame is blurred and swapped in continuously. On other platforms it falls back to a very brief hide. The first frame fades in smoothly rather than appearing at once, and blur strength changes continuously (fixed Gaussian kernel + continuous sigma). If your capture tool does not honour `WDA_EXCLUDEFROMCAPTURE`, set `exclude_from_capture` to `false` in the config to use the fallback. It captures the primary display only in this prototype.
-- Protected content, DRM video, secure desktops, some fullscreen games, and some macOS capture contexts may not be capturable.
-- This prototype does not upload frames or face embeddings. The owner embedding is stored locally in the app config. Protect your OS account.
-- Do not use this as a substitute for physical privacy controls in high-risk environments.
+设置界面里两种手段并列展示，各有自己的**启用开关**和**触发规则**（可多选「有陌生人」「主人离开」）：
 
-## Two protection methods
-Both methods are configured side by side, each with its own **enable switch** and **trigger reasons** (checkboxes for 有陌生人 / 主人离开, multi-select):
-- **保护手段一 · 窗口模糊 / 遮挡覆盖** — the full-screen dim/blur overlay. Enable it and choose which reasons turn it on, plus tune effect mode, distances, dim and blur.
-- **保护手段二 · 自动置顶指定程序** (Windows only) — bring chosen apps to the front. Enable it and choose which reasons turn it on, then add program rules:
-  - **点选当前窗口…** — pick from a list of currently open windows; the process name is captured automatically.
-  - **手动添加…** — type a process name (e.g. `chrome.exe`) and/or a window-title keyword.
+- **保护手段一 · 窗口模糊 / 遮挡覆盖**：全屏模糊 / 暗色遮罩。可开关、选触发原因，并调节效果模式、触发距离、暗度与模糊强度。
+- **保护手段二 · 自动置顶指定程序**（仅 Windows）：把指定窗口切到最前。可开关、选触发原因，并添加程序规则：
+  - **点选当前窗口…**：从当前打开的窗口列表中点选，自动记录进程名。
+  - **手动添加…**：输入进程名（如 `chrome.exe`）和 / 或窗口标题关键字。
 
-A program rule matches when its process name and title keyword (whichever are set) both match; both fields are case-insensitive and at least one must be filled. When an enabled method's trigger reasons match the current situation, it activates; when the situation clears or the app quits, windows are restored to their original top-most state. The two methods are fully independent — disabling the blur overlay does not disable auto-raise. Auto-raise is driven directly by the live detection reason, so it works even while the overlay is off. Non-Windows platforms show a notice and disable the auto-raise section.
+程序规则按「进程名 + 标题关键字」匹配（可只填其一），两者都不区分大小写，且至少填一项。当某手段处于启用状态、且触发原因与当前情况匹配时，它就会启动；情况解除或程序退出后，窗口会还原到原来的置顶状态。两种手段完全独立——关掉模糊覆盖不会影响自动置顶。自动置顶由实时识别原因直接驱动，即使覆盖层关闭也能工作。非 Windows 平台会显示提示并禁用该区域。
 
-## Controls
-- **Pause protection**: temporarily hides the privacy overlay.
-- **Quit**: exits the app.
-- The app window itself stays available for settings; the overlay is only shown when an unknown face is detected inside the configured trigger distance.
-- The settings window is freely resizable (minimum 620×420). If the content is taller than the window, a vertical scroll bar appears so you can scroll; the camera preview can also be collapsed with **▾ 收起摄像头画面** (detection keeps running in the background). Related fields are grouped onto shared rows to keep the layout compact.
+## 操作说明
 
-## Packaging
+- **暂停保护**：临时关闭隐私保护覆盖层。
+- **退出**：关闭程序。
+- 主窗口始终可用于设置，覆盖层仅在触发保护时出现。
+- 设置窗口可自由缩放（最小 620×420）；内容超过窗口高度时会出现垂直滚动条；摄像头画面可用「▾ 收起摄像头画面」折叠（后台识别照常运行）。相关表单项已合并到同一行，布局更紧凑。
+- 快捷键：`Ctrl+Shift+P` 暂停 / 恢复保护，`Esc` 暂停。
 
-### Windows
+## 防闪烁与流畅度调优
+
+检测到的距离和人脸命中天然会逐帧抖动。屏安符通过非对称缓动（保护快、解除慢）+ 显示迟滞 + 漏检宽限吸收抖动；覆盖层只在保护时显示（从全透明淡入、淡出后才隐藏），空闲时根本不在屏幕上，不会拦截鼠标点击；Windows 上还通过扩展样式实现鼠标穿透。以下参数可在 `~/.privacyguard-ai/config.json` 中调整：
+
+- `risk_rise_alpha` / `risk_fall_alpha`（0~1）：缓动速度。越小越平滑，但反应越慢。
+- `show_threshold` / `hide_threshold`：进入 / 离开保护的迟滞区间（hide 应小于 show）。
+- `stranger_miss_grace`（秒）：陌生人短暂漏检后，保护维持的时间。
+- `capture_interval_ms`（真实模糊）：抓屏间隔，越小越跟手但越耗 CPU。
+- `blur_kernel_size`（真实模糊）：高斯核尺寸，强度由连续 sigma 控制，不会出现明显跳档。
+- `exclude_from_capture`（Windows，真实模糊）：让覆盖层不进入屏幕捕获，从而无需隐藏。仅当你的截图工具出现残留自捕获时才关闭。
+- `protect_when_owner_absent`：启用后（且已录入机主），机主离开画面即保护；关闭则回到"只防陌生人"。
+- `owner_absent_risk`：机主离开且无陌生人时使用的保护强度（0~1）。
+- `owner_absent_grace`（秒）：机主离开视野多久后才触发保护（避免低头误判）。
+- `overlay_enabled` / `auto_raise_enabled`：两种手段的独立开关。关掉模糊覆盖**不会**影响自动置顶（反之亦然）。
+- `overlay_triggers` / `auto_raise_triggers`：各手段的触发原因列表，可选值 `"stranger"`（检测到陌生人）和 `"owner_absent"`（机主不在画面）。可多选；留空则回退为两种都触发。
+
+## 重要限制
+
+- 普通 RGB 摄像头无法测量深度。距离是根据人脸视觉大小、假定平均脸宽（14.5 cm）和摄像头水平视角估算的。请把视角设为与你摄像头相符的值，最好用已知距离标定一次。
+- SFace 匹配不是安全级生物认证。光照、姿态、摄像头质量和外貌变化都会影响识别。请保留手动暂停 / 关闭快捷键。
+- 真实模糊覆盖层在屏幕上持续存在且不闪烁：Windows 上用 `WDA_EXCLUDEFROMCAPTURE` 让覆盖层不进入屏幕捕获（无需自我隐藏），抓到的画面经模糊后持续替换；其他平台回退到极短隐藏。首帧平滑淡入而非突然出现，模糊强度连续变化（固定核 + 连续 sigma）。若你的捕获工具不支持该机制，可在配置里把 `exclude_from_capture` 设为 `false` 走回退路径。原型仅捕获主显示器。
+- 受保护内容、DRM 视频、安全桌面、部分全屏游戏以及某些 macOS 捕获场景可能无法截获。
+- 本原型不上传画面或人脸特征，机主特征保存在本地配置中。请保护好你的系统账户。
+- 在高风险环境中，请勿把它当作物理隐私措施的替代品。
+
+## 打包为独立程序
+
+### Windows / macOS
 ```powershell
 pip install pyinstaller
 pyinstaller --noconfirm --windowed --name PrivacyGuardAI main.py
 ```
+正式分发时，请从签名后的 `.app` / `.exe` 测试摄像头与截屏权限；macOS 分发通常需要签名与公证。
 
-### macOS
-```bash
-pip install pyinstaller
-pyinstaller --noconfirm --windowed --name PrivacyGuardAI main.py
-```
-For distribution, test camera and screen-capture permissions from the signed `.app`. macOS distribution generally requires code signing/notarization.
+## 项目结构
 
-## Project structure
 ```text
 PrivacyGuardAI/
-├── main.py
+├── main.py                 # 程序入口
 ├── requirements.txt
-├── privacyguard/
-│   ├── __init__.py
-│   ├── app.py
-│   ├── config.py
-│   ├── overlay.py
-│   ├── vision.py
-│   └── windowctl.py
-└── README.md
+├── README.md
+├── docs/                   # GitHub Pages 项目主页
+│   └── index.html
+└── privacyguard/
+    ├── __init__.py
+    ├── app.py              # 主界面与两种手段的联动逻辑
+    ├── config.py           # 配置定义、加载与兼容处理
+    ├── overlay.py          # 全屏模糊 / 遮挡覆盖层
+    ├── vision.py           # 摄像头采集、人脸检测与风险决策
+    └── windowctl.py        # Windows 窗口枚举 / 置顶 / 还原
 ```
+
+## 许可证
+
+见 [LICENSE](LICENSE)。

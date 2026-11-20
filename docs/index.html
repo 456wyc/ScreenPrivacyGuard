@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>屏安符 · PrivacyGuard AI — 纯本地 AI 隐私屏保</title>
+<meta name="description" content="屏安符是一款纯本地运行的 AI 隐私屏保：摄像头识别陌生人或机主离开，自动模糊/遮挡屏幕。不联网、不上传，保护你的屏幕隐私。">
+<style>
+  :root{
+    --ink:#0f172a; --ink2:#334155; --muted:#64748b; --line:#e2e8f0;
+    --bg:#f8fafc; --card:#ffffff; --brand:#2563eb; --brand2:#7c3aed;
+    --brand-soft:#eff6ff; --ok:#16a34a; --shadow:0 10px 30px rgba(15,23,42,.08);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    color:var(--ink);background:var(--bg);line-height:1.7;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+  .grad{background:linear-gradient(120deg,var(--brand),var(--brand2));-webkit-background-clip:text;background-clip:text;color:transparent}
+
+  /* nav */
+  nav{position:sticky;top:0;z-index:50;background:rgba(248,250,252,.85);backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;align-items:center;justify-content:space-between;height:66px}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:20px}
+  .logo .seal{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--brand),var(--brand2));
+    display:grid;place-items:center;color:#fff;font-size:18px;box-shadow:0 4px 12px rgba(37,99,235,.35)}
+  nav .links{display:flex;gap:28px;font-size:15px;color:var(--ink2)}
+  nav .links a:hover{color:var(--brand)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 20px;border-radius:10px;
+    font-size:15px;font-weight:600;transition:.2s;cursor:pointer;border:1px solid transparent}
+  .btn-primary{background:linear-gradient(120deg,var(--brand),var(--brand2));color:#fff;box-shadow:0 6px 18px rgba(37,99,235,.28)}
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(37,99,235,.36)}
+  .btn-ghost{background:#fff;border-color:var(--line);color:var(--ink)}
+  .btn-ghost:hover{border-color:var(--brand);color:var(--brand)}
+
+  /* hero */
+  header.hero{background:radial-gradient(1000px 500px at 80% -10%,#dbeafe 0%,transparent 60%),
+    radial-gradient(700px 400px at 0% 30%,#ede9fe 0%,transparent 55%),#fff;padding:76px 0 64px;
+    border-bottom:1px solid var(--line)}
+  .hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:56px;align-items:center}
+  .badge{display:inline-flex;align-items:center;gap:8px;background:var(--brand-soft);color:var(--brand);
+    padding:7px 14px;border-radius:999px;font-size:13px;font-weight:600;margin-bottom:22px}
+  .badge .dot{width:7px;height:7px;border-radius:50%;background:var(--brand)}
+  h1{font-size:52px;line-height:1.15;letter-spacing:-1px;font-weight:850}
+  h1 .sub{display:block;font-size:20px;font-weight:600;color:var(--muted);letter-spacing:0;margin-top:12px}
+  .lead{font-size:18px;color:var(--ink2);margin:24px 0 30px;max-width:560px}
+  .hero-cta{display:flex;gap:14px;flex-wrap:wrap}
+  .trust{display:flex;gap:26px;margin-top:34px;flex-wrap:wrap;color:var(--muted);font-size:14px}
+  .trust b{display:block;color:var(--ink);font-size:20px}
+  .hero-visual{position:relative}
+  .hero-visual img{width:100%;border-radius:16px;box-shadow:0 24px 60px rgba(15,23,42,.22);display:block}
+  .float{position:absolute;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 16px;
+    box-shadow:var(--shadow);font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px}
+  .float .ic{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;color:#fff;font-size:14px}
+  .float.a{top:18px;left:-26px;animation:fl 5s ease-in-out infinite}
+  .float.b{bottom:22px;right:-20px;animation:fl 5s ease-in-out infinite 1.4s}
+  @keyframes fl{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+
+  /* sections */
+  section{padding:84px 0}
+  .sec-h{text-align:center;max-width:640px;margin:0 auto 52px}
+  .kicker{font-size:13px;font-weight:700;letter-spacing:2px;color:var(--brand);text-transform:uppercase}
+  .sec-h h2{font-size:36px;letter-spacing:-.5px;margin:10px 0 14px}
+  .sec-h p{color:var(--muted);font-size:17px}
+
+  .features{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+  .fcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:28px;
+    box-shadow:0 2px 8px rgba(15,23,42,.03);transition:.25s}
+  .fcard:hover{transform:translateY(-5px);box-shadow:var(--shadow);border-color:#c7d2fe}
+  .fcard .fi{width:46px;height:46px;border-radius:12px;background:var(--brand-soft);color:var(--brand);
+    display:grid;place-items:center;font-size:23px;margin-bottom:18px}
+  .fcard h3{font-size:18px;margin-bottom:9px}
+  .fcard p{color:var(--muted);font-size:14.5px}
+
+  .how{background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;counter-reset:s}
+  .step{position:relative;background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:26px 22px}
+  .step:before{counter-increment:s;content:counter(s);position:absolute;top:-16px;left:22px;width:32px;height:32px;
+    border-radius:50%;background:linear-gradient(120deg,var(--brand),var(--brand2));color:#fff;
+    display:grid;place-items:center;font-weight:800;font-size:15px;box-shadow:0 4px 10px rgba(37,99,235,.3)}
+  .step h3{font-size:16px;margin:8px 0 7px}
+  .step p{font-size:14px;color:var(--muted)}
+
+  .methods{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+  .mcard{border-radius:18px;padding:34px;color:#fff;position:relative;overflow:hidden}
+  .mcard.one{background:linear-gradient(140deg,#1e3a8a,#4338ca)}
+  .mcard.two{background:linear-gradient(140deg,#0f766e,#0e7490)}
+  .mcard:after{content:"";position:absolute;width:220px;height:220px;border-radius:50%;
+    background:rgba(255,255,255,.08);top:-80px;right:-60px}
+  .mcard .num{font-size:13px;opacity:.8;font-weight:600;letter-spacing:1px}
+  .mcard h3{font-size:25px;margin:10px 0 14px}
+  .mcard p{opacity:.92;font-size:15px;margin-bottom:18px}
+  .mcard ul{list-style:none;font-size:14px;opacity:.95}
+  .mcard li{padding:6px 0 6px 22px;position:relative}
+  .mcard li:before{content:"✓";position:absolute;left:0;font-weight:800}
+
+  .privacy{background:linear-gradient(120deg,#0f172a,#1e293b);color:#fff;padding:80px 0}
+  .privacy-grid{display:grid;grid-template-columns:.9fr 1.1fr;gap:56px;align-items:center}
+  .privacy h2{font-size:34px;margin-bottom:16px}
+  .privacy p{color:#cbd5e1;font-size:16px}
+  .plist{display:grid;gap:14px}
+  .pitem{display:flex;gap:14px;align-items:flex-start;background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:16px 18px}
+  .pitem .ic{flex:none;width:34px;height:34px;border-radius:9px;background:rgba(59,130,246,.25);
+    display:grid;place-items:center;font-size:17px}
+  .pitem b{display:block;font-size:15px}
+  .pitem span{font-size:13.5px;color:#94a3b8}
+
+  .start{background:var(--bg)}
+  .code{background:#0f172a;color:#e2e8f0;border-radius:14px;padding:22px 24px;font-family:"SFMono-Regular",Consolas,monospace;
+    font-size:14px;line-height:1.9;overflow-x:auto;box-shadow:var(--shadow)}
+  .code .c{color:#64748b}
+  .code .p{color:#93c5fd}
+  .tabs{display:flex;gap:8px;margin-bottom:16px}
+  .tab{padding:8px 16px;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;border:1px solid var(--line);background:#fff;color:var(--muted)}
+  .tab.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+  .start-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}
+  .start-copy h2{font-size:34px;margin-bottom:14px}
+  .start-copy p{color:var(--muted);font-size:16px;margin-bottom:24px}
+  .note{background:var(--brand-soft);border-left:3px solid var(--brand);padding:14px 18px;border-radius:0 10px 10px 0;
+    font-size:14px;color:var(--ink2);margin-top:20px}
+
+  footer{background:#fff;border-top:1px solid var(--line);padding:36px 0;color:var(--muted);font-size:14px}
+  footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;align-items:center}
+  footer a:hover{color:var(--brand)}
+
+  @media(max-width:900px){
+    .hero-grid,.privacy-grid,.start-grid{grid-template-columns:1fr;gap:36px}
+    .features{grid-template-columns:repeat(2,1fr)}
+    .steps{grid-template-columns:repeat(2,1fr);row-gap:32px}
+    .methods{grid-template-columns:1fr}
+    h1{font-size:40px}
+    .float.a{left:6px}.float.b{right:6px}
+    nav .links{display:none}
+  }
+  @media(max-width:560px){
+    .features,.steps{grid-template-columns:1fr}
+    h1{font-size:34px}
+    section{padding:60px 0}
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="logo"><span class="seal">🛡</span> 屏安符</div>
+    <div class="links">
+      <a href="#features">核心特性</a>
+      <a href="#how">工作原理</a>
+      <a href="#methods">保护手段</a>
+      <a href="#privacy">隐私承诺</a>
+      <a href="#start">快速开始</a>
+    </div>
+    <a class="btn btn-primary" href="#start">开始使用</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="badge"><span class="dot"></span> 纯本地 · 离线运行 · 开源</span>
+      <h1>别人靠近，屏幕自己“变脸”
+        <span class="sub">屏安符 — 你的本地 AI 隐私屏保</span>
+      </h1>
+      <p class="lead">摄像头识别到陌生人、或发现你离开座位时，屏安符会自动模糊 / 遮挡屏幕。全部识别在本机完成，不联网、不上传，安静地替你守住屏幕上的秘密。</p>
+      <div class="hero-cta">
+        <a class="btn btn-primary" href="#start">下载并开始使用 →</a>
+        <a class="btn btn-ghost" href="#features">了解工作原理</a>
+      </div>
+      <div class="trust">
+        <div><b>100%</b>本地处理</div>
+        <div><b>0</b>数据上传</div>
+        <div><b>2</b>种保护手段</div>
+        <div><b>免费</b>开源</div>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <img src="assets/preview-placeholder.svg" alt="屏安符界面示意图">
+      <div class="float a"><span class="ic" style="background:#2563eb">👁</span> 检测到陌生人</div>
+      <div class="float b"><span class="ic" style="background:#7c3aed">🛡</span> 屏幕已保护</div>
+    </div>
+  </div>
+</header>
+
+<section id="features">
+  <div class="wrap">
+    <div class="sec-h">
+      <div class="kicker">Why 屏安符</div>
+      <h2>看得见的保护，看不见的打扰</h2>
+      <p>只在真正需要时出现，其余时间安静退居后台。没有账号，没有云端，没有多余权限。</p>
+    </div>
+    <div class="features">
+      <div class="fcard"><div class="fi">🔍</div><h3>本地人脸识别</h3><p>OpenCV YuNet 检测人脸、SFace 识别机主，20 张样本即可完成录入，全程离线。</p></div>
+      <div class="fcard"><div class="fi">🚶</div><h3>离开即保护</h3><p>录入机主后，镜头里看不到你时就自动保护——哪怕画面空无一人。短暂低头有宽限，不误触发。</p></div>
+      <div class="fcard"><div class="fi">📏</div><h3>按距离调节</h3><p>根据人脸大小估算距离，越近保护越强。暗度与模糊度随距离平滑渐变，不突兀。</p></div>
+      <div class="fcard"><div class="fi">✨</div><h3>无闪烁体验</h3><p>非对称缓动 + 迟滞 + 渐进淡入淡出。Windows 真实模糊用系统机制排除覆盖层，从根上消除周期闪烁。</p></div>
+      <div class="fcard"><div class="fi">🪟</div><h3>两种保护手段</h3><p>全屏模糊覆盖，与自动置顶指定程序，彼此独立、各自可配触发规则（陌生人 / 主人离开）。</p></div>
+      <div class="fcard"><div class="fi">🔒</div><h3>隐私优先</h3><p>不上传任何画面或人脸数据，机主特征仅保存在本地配置。你的隐私，只属于你的电脑。</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="how" id="how">
+  <div class="wrap">
+    <div class="sec-h">
+      <div class="kicker">How it works</div>
+      <h2>四步，构建你的私人防护圈</h2>
+      <p>从录入到保护，一切都在你的设备上静默完成。</p>
+    </div>
+    <div class="steps">
+      <div class="step"><h3>录入机主</h3><p>正对摄像头采集 20 张人脸样本，让屏安符记住“自己人”。</p></div>
+      <div class="step"><h3>持续识别</h3><p>摄像头实时检测画面中的人脸，判断是机主、陌生人，还是没人。</p></div>
+      <div class="step"><h3>触发判断</h3><p>结合触发规则（陌生人靠近 / 机主离开）与距离，计算保护强度。</p></div>
+      <div class="step"><h3>平滑保护</h3><p>覆盖层从透明平滑淡入，模糊或遮挡屏幕；情况解除后自然淡出。</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="methods">
+  <div class="wrap">
+    <div class="sec-h">
+      <div class="kicker">Two methods</div>
+      <h2>两种手段，按需组合</h2>
+      <p>各自独立开关，各自选择触发原因，既可单用也可叠加。</p>
+    </div>
+    <div class="methods">
+      <div class="mcard one">
+        <div class="num">保护手段 一</div>
+        <h3>窗口模糊 / 遮挡覆盖</h3>
+        <p>在全屏铺一层模糊与暗色遮罩，让旁人看不清屏幕内容，强度随风险平滑变化。</p>
+        <ul>
+          <li>简易模式：暗色覆盖 + 毛玻璃质感，无需截屏权限</li>
+          <li>真实模糊：MSS 抓屏 + 高斯模糊，实时模糊桌面</li>
+          <li>可调触发距离、最大暗度、模糊强度</li>
+          <li>防闪烁：渐进淡入 + 连续强度</li>
+        </ul>
+      </div>
+      <div class="mcard two">
+        <div class="num">保护手段 二 · 仅 Windows</div>
+        <h3>自动置顶指定程序</h3>
+        <p>触发保护时，把指定程序窗口自动切到最上层；解除后还原它原本的置顶状态。</p>
+        <ul>
+          <li>点选当前窗口，自动记录进程名</li>
+          <li>手动填写进程名 / 窗口标题关键字</li>
+          <li>规则匹配不区分大小写</li>
+          <li>与模糊覆盖完全解耦，可单独工作</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="privacy" id="privacy">
+  <div class="wrap privacy-grid">
+    <div>
+      <div class="kicker" style="color:#93c5fd">Privacy first</div>
+      <h2>你的屏幕，<br>只有你能看清</h2>
+      <p>屏安符从设计之初就把隐私放在第一位。没有云端账户，没有数据采集，没有后台上传——它只是在你的电脑上，安静地多看一眼有没有旁人。</p>
+    </div>
+    <div class="plist">
+      <div class="pitem"><div class="ic">📴</div><div><b>完全离线</b><span>仅首次下载人脸识别模型需要联网，之后全程本地运行。</span></div></div>
+      <div class="pitem"><div class="ic">💾</div><div><b>数据只存本地</b><span>机主人脸特征保存在本地配置文件，不上传、不共享。</span></div></div>
+      <div class="pitem"><div class="ic">🖱</div><div><b>不打扰操作</b><span>覆盖层空闲时不存在于屏幕，保护时也支持鼠标穿透。</span></div></div>
+      <div class="pitem"><div class="ic">🔑</div><div><b>保留手动控制</b><span>随时用快捷键暂停 / 恢复保护，主动权始终在你手里。</span></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="start" id="start">
+  <div class="wrap start-grid">
+    <div class="start-copy">
+      <div class="kicker">Get started</div>
+      <h2>几分钟，装上你的屏安符</h2>
+      <p>需要 Python 3.11 与一个摄像头。首次启动会自动下载人脸识别模型。</p>
+      <div class="note">💡 建议先用「简易模式」测试，确认效果后再切到「真实模糊」（macOS 需授予屏幕录制权限）。</div>
+    </div>
+    <div>
+      <div class="tabs">
+        <button class="tab on" data-tab="win">Windows</button>
+        <button class="tab" data-tab="mac">macOS</button>
+      </div>
+      <div class="code" id="code-win"><span class="c"># PowerShell</span>
+py -3.11 -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+<span class="p">python main.py</span></div>
+      <div class="code" id="code-mac" style="display:none"><span class="c"># bash</span>
+python3.11 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+<span class="p">python main.py</span></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div>© 屏安符 PrivacyGuard AI · 本地 AI 隐私屏保</div>
+    <div>以 MIT 许可证开源 · 所有处理均在你的设备上完成</div>
+  </div>
+</footer>
+
+<script>
+  document.querySelectorAll('.tab').forEach(function(t){
+    t.addEventListener('click',function(){
+      document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('on')});
+      t.classList.add('on');
+      document.getElementById('code-win').style.display = t.dataset.tab==='win'?'block':'none';
+      document.getElementById('code-mac').style.display = t.dataset.tab==='mac'?'block':'none';
+    });
+  });
+</script>
+</body>
+</html>
